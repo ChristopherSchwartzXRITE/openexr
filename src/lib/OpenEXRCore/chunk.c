@@ -37,10 +37,14 @@
 
 static inline int
 atomic_compare_exchange_strong (
-    uint64_t volatile* object, uint64_t* expected, uint64_t desired)
+    atomic_uintptr_t volatile* object, uintptr_t* expected, uintptr_t desired)
 {
-    uint64_t prev =
-        (uint64_t) InterlockedCompareExchange64 (object, desired, *expected);
+    uintptr_t prev =
+#    ifdef _WIN64
+        (uintptr_t) InterlockedCompareExchange64 (object, desired, *expected);
+#    else
+        (uintptr_t) InterlockedCompareExchange ((uintptr_t volatile*) object, desired, *expected);
+#    endif
     if (prev == *expected) return 1;
     *expected = prev;
     return 0;
@@ -565,7 +569,7 @@ extract_chunk_table (
     if (ctable == NULL)
     {
         int64_t      nread = 0;
-        uint64_t     eptr = 0, nptr = 0;
+        uintptr_t    eptr = 0, nptr = 0;
         int          complete = 1;
         uint64_t     maxoff   = ((uint64_t) -1);
         exr_result_t rv;
