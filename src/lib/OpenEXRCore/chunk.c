@@ -33,7 +33,11 @@
 /* msvc w/ c11 support is only very new, until we know what the preprocessor checks are, provide defaults */
 #    include <windows.h>
 
-#    define atomic_load(object) InterlockedOr64 ((int64_t volatile*) object, 0)
+#    ifdef _WIN64
+#        define atomic_load(object) InterlockedOr64 ((ptrdiff_t volatile*) object, 0)
+#    else
+#        define atomic_load(object) InterlockedOr ((ptrdiff_t volatile*) object, 0)
+#    endif
 
 static inline int
 atomic_compare_exchange_strong (
@@ -560,7 +564,7 @@ extract_chunk_table (
 {
     uint64_t* ctable     = NULL;
     uint64_t  chunkoff   = part->chunk_table_offset;
-    uint64_t  chunkbytes = sizeof (uint64_t) * (uint64_t) part->chunk_count;
+    size_t    chunkbytes = sizeof (uint64_t) * (size_t) part->chunk_count;
 
     *chunkminoffset = chunkoff + chunkbytes;
 
@@ -675,7 +679,7 @@ alloc_chunk_table (
         EXR_CONST_CAST (atomic_uintptr_t*, &(part->chunk_table)));
     if (ctable == NULL)
     {
-        uint64_t  chunkbytes = sizeof (uint64_t) * (uint64_t) part->chunk_count;
+        size_t    chunkbytes = sizeof (uint64_t) * (size_t) part->chunk_count;
         uintptr_t eptr = 0, nptr = 0;
 
         ctable = (uint64_t*) ctxt->alloc_fn (chunkbytes);
@@ -1577,7 +1581,7 @@ exr_read_chunk (
             memset (
                 ((uint8_t*) packed_data) + nread,
                 0,
-                toread - (uint64_t) (nread));
+                (size_t) (toread - (uint64_t) (nread)));
     }
     else
         rv = EXR_ERR_SUCCESS;
